@@ -1,2 +1,91 @@
 ---
 # tasks file for config-ingress
+
+- name: Create namespaces for k8s services
+  kubernetes.core.k8s:
+    state: present
+    kind: Namespace
+    name: "{{ item }}"
+    kubeconfig: /etc/kubernetes/admin.conf
+  loop:
+    - nginx-ingress
+    - kubernetes-dashboard
+  become: true
+
+- name: Check if nginx helm repo is installed
+  ansible.builtin.command:
+    cmd: helm list -n nginx-ingress --no-headers
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: helm_repo
+  become: true
+
+- name: Install nginx ingress with helm
+  ansible.builtin.command:
+    cmd: helm install my-ingress oci://ghcr.io/nginx/charts/nginx-ingress --version 2.0.1 --namespace nginx-ingress
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: helm_repo.rc != 0 or helm_repo.stdout == ""
+  become: true
+
+- name: Install kube dashboard with helm
+  kubernetes.core.helm:
+    name: my-dashboard
+    chart_ref: kubernetes-dashboard
+    release_namespace: kubernetes-dashboard
+    state: present
+    chart_repo_url: https://kubernetes.github.io/dashboard/
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+  tags:
+    - k8s-dashboard
+
+- name: Create service account for dashboard
+  kubernetes.core.k8s:
+    state: present
+    kind: ServiceAccount
+    name: sope-admin
+    namespace: kubernetes-dashboard
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+  tags: 
+    - k8s-dashboard
+
+- name: Create cluster role binding for dashboard
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: sope-admin
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+      - kind: ServiceAccount
+        name: sope-admin
+        namespace: kubernetes-dashboard
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+  tags:
+    - k8s-dashboard
+
+- name: Create token for dashboard
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sope-admin-token
+        annotations:
+          kubernetes.io/service-account.name: sope-admin
+      type: kubernetes.io/service-account-token
+    namespace: kubernetes-dashboard
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+  register: token
+  tags:
+    - k8s-dashboard
