@@ -1,0 +1,13 @@
+---
+# vars file for install
+configure_hosts_k8s_ports:
+  - 6443
+  - 2379-2380
+  - 10250
+  - 10259
+  - 10257
+  - 10256
+  - 30000-32767
+
+configure_hosts_crio_version: v1.30
+configure_hosts_k8s_version: v1.30

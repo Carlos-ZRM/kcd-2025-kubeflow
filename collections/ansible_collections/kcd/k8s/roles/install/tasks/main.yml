@@ -1,0 +1,14 @@
+---
+# tasks file for install
+
+#Configure linux
+- name: TASK Configure hosts
+  ansible.builtin.import_tasks:
+    file: configure_hosts.yaml
+  become: true
+
+# Install kubeadm 
+- name: TASK nstall K8s with kubeadm
+  ansible.builtin.import_tasks:
+    file: install_k8s.yaml
+  become: true
