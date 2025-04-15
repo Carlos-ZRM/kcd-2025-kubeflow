@@ -86,12 +86,24 @@
   loop: [br_netfilter, overlay]
 
 
-# - name: Configure firewalld
-#   ansible.posix.firewalld:
-#     port: "{{ item }}/udp"
-#     permanent: true
-#     state: enabled
-#   loop: "{{ configure_hosts_k8s_ports }}"
+- name: Configure firewalld
+  ansible.posix.firewalld:
+    port: "{{ item }}/udp"
+    permanent: true
+    state: enabled
+    immediate: true
+    zone: public
+  loop: "{{ configure_hosts_k8s_ports }}"
+
+- name: Add rich rule to firewalld
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="10.0.0.0/8" accept'
+    permanent: true
+    state: enabled
+    immediate: true
+    zone: public
+  become: true
+
 
 - name: Configure kernel parameters
   ansible.posix.sysctl:

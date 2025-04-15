@@ -106,7 +106,7 @@
     name: metrics-server
     repo_url: https://kubernetes-sigs.github.io/metrics-server/
   environment:
-    KUBECONFIG
+    KUBECONFIG: /etc/kubernetes/admin.conf
   become: true
 
 - name: Install metrics-server
