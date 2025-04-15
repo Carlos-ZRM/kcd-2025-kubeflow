@@ -124,3 +124,15 @@
   tags:
     - metrics-server
   #--kubelet-insecure-tls
+
+- name: Add --kubelet-insecure-tls to metrics-server deployment using JSON patch
+  kubernetes.core.k8s_json_patch:
+    kind: Deployment
+    namespace: kube-system
+    name: metrics-server
+    patch:
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --kubelet-insecure-tls
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
