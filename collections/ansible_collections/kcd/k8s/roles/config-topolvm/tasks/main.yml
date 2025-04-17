@@ -1,2 +1,18 @@
 ---
 # tasks file for config-topolvm
+#Configure linux
+- name: TASK Configure LVG
+  ansible.builtin.import_tasks:
+    file: configure_lvg.yml
+  become: true
+
+- name: TASK Install certmanager
+  ansible.builtin.import_tasks:
+    file: install_certmanager.yml
+  become: true
+
+# Install topolvm
+- name: TASK Install topolvm
+  ansible.builtin.import_tasks:
+    file: install_topolvm.yml
+  become: true

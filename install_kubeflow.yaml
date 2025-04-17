@@ -8,6 +8,21 @@
     - name: ROLE Install K8s with kubeadm
       ansible.builtin.import_role:
         name: install
+      tags:
+        - install-k8s
+
     - name: ROLE Configure ingress and dashboard
       ansible.builtin.import_role:
         name: config-ingress
+      tags:
+        - config-ingress
+        - config-dashboard
+
+    - name: ROLE Configure topolvm
+      ansible.builtin.import_role:
+        name: config-topolvm
+      vars:
+        topolvm_device: vdb
+      tags:
+        - config-topolvm
+        - config-lvg

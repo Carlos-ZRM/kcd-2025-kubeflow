@@ -1,0 +1,35 @@
+---
+- name: Check if topolvm device is set
+  ansible.builtin.assert:
+    that:
+      - topolvm_device is defined
+    fail_msg: "topolvm_device variable is not set. Please set it in your inventory or playbook."
+  become: true
+  when: topolvm_device is not none
+
+- name: Check if volumegroup exists
+  ansible.builtin.command:
+    cmd: vgs k8s-vg
+  register: vg_exists
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: Create a partition
+  community.general.parted:
+    device: /dev/{{ topolvm_device }}
+    number: 1
+    state: present
+    label: gpt
+    part_start: 0%
+    part_end: 100%
+  when: vg_exists.rc != 0
+  become: true
+
+- name: Create a volume group
+  ansible.builtin.lvg:
+    vg: k8s-vg
+    pvs: /dev/{{ topolvm_device }}1
+    pesize: 16
+  when: vg_exists.rc != 0
+  become: true

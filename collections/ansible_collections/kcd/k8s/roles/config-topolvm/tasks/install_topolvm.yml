@@ -1,0 +1,61 @@
+---
+
+- name: Create namespace topolvm-system
+  kubernetes.core.k8s:
+    state: present
+    kind: Namespace
+    name: topolvm-system
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+
+- name: Label namespace for topolvm
+  kubernetes.core.k8s:
+    state: patched
+    kind: Namespace
+    name: "{{ item }}"
+    definition:
+      metadata:
+        labels:
+          topolvm.io/webhook: ignore
+    kubeconfig: /etc/kubernetes/admin.conf
+  loop:
+    - topolvm-system
+    - kube-system
+  become: true
+
+- name: Add helm repository for topolvm
+  kubernetes.core.helm_repository:
+    name: topolvm
+    url: https://topolvm.github.io/topolvm
+  environment:
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+
+- name: Install topolvm
+  kubernetes.core.helm:
+    name: topolvm
+    chart_ref: topolvm/topolvm
+    release_name: topolvm
+    release_namespace: topolvm-system
+    state: present
+    kubeconfig: /etc/kubernetes/admin.conf
+    values:
+      controller:
+        replicaCount: 1
+      lvmd:
+        deviceClasses:
+          - {"default":true,"name":"ssd","spare-gb":10,"volume-group":"k8s-vg"}
+  become: true
+
+- name: Make topolvm-provisioner the default storage class
+  kubernetes.core.k8s:
+    state: patched
+    kind: StorageClass
+    name: topolvm-provisioner
+    merge_type: strategic-merge
+    definition:
+      metadata:
+        annotations:
+          storageclass.kubernetes.io/is-default-class: "true"
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true

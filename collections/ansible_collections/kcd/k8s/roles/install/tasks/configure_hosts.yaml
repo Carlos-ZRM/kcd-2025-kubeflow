@@ -57,6 +57,7 @@
     state: present
   loop:
     - kubernetes
+    - cryptography
 
 - name: Set hostname
   ansible.builtin.hostname:
