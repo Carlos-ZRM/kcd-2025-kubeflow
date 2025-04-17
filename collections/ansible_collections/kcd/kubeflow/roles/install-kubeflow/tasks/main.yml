@@ -1,0 +1,6 @@
+---
+# tasks file for install-kubeflow
+- name: TASK Install Kubeflow
+  ansible.builtin.import_tasks:
+    file: install_kubeflow.yml
+  become: true

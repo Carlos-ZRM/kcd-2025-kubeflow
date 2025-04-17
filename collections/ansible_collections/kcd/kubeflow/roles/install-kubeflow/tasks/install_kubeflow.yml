@@ -1,0 +1,17 @@
+---
+# This playbook installs Kubeflow on a Kubernetes cluster using kustomize.
+- name: Get a git repo
+  ansible.builtin.git:
+    repo: https://github.com/kubeflow/manifests.git
+    dest: /tmp/manifests
+
+- name: Apply kustomize resources with retries
+  ansible.builtin.shell: |
+    while ! kustomize build /tmp/manifests/example | kubectl apply --server-side --force-conflicts -f -; do
+      echo "Retrying to apply resources"
+      sleep 20
+    done
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+
