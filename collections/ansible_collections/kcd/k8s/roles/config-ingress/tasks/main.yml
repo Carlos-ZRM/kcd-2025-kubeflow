@@ -9,7 +9,7 @@
     owner: root
     group: root
   become: true
-    
+
 - name: Generate an OpenSSL private key CA
   community.crypto.openssl_privatekey:
     path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
@@ -33,7 +33,6 @@
     csr_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.csr
     provider: selfsigned
   become: true
-
 
 - name: Generate an OpenSSL private key for domain
   community.crypto.openssl_privatekey:
