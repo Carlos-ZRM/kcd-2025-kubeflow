@@ -4,6 +4,7 @@
 - name: Add sope user
   ansible.builtin.user:
     name: sope
+    group: users
     state: present
     shell: /bin/bash
     createhome: true
@@ -14,15 +15,41 @@
     state: directory
     mode: '0700'
     owner: sope
-    group: sope
+    group: users
 
 - name: Set ssh key
   ansible.builtin.copy:
     content: "{{ lookup('file', 'id_ed25519.pub') }}"
     dest: /home/sope/.ssh/authorized_keys
     owner: sope
-    group: sope
+    group: users
     mode: '0600'
+
+## ADD for developer stage and remove for production
+- name: Add sope to wheel group
+  ansible.builtin.user:
+    name: sope
+    groups: wheel
+    append: true
+    state: present
+
+## ADD for developer stage and remove for production
+- name: Add sope to sudoers with no password
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^sope ALL=\(ALL\) NOPASSWD:ALL$'
+    line: 'sope ALL=(ALL) NOPASSWD:ALL'
+    validate: 'visudo -cf %s'
+  become: true
+
+- name: Add or modify nofile limit for all users
+  community.general.pam_limits:
+    domain: "*"
+    limit_type: '-'
+    limit_item: nofile
+    value: 2048
+  become: true
 
 - name: Install Linux packages
   ansible.builtin.package:
@@ -38,7 +65,6 @@
     - cockpit
     - cockpit-machines
     - cockpit-storaged
-
 
 - name: Enable Linux services
   ansible.builtin.systemd:
@@ -86,7 +112,6 @@
     state: present
   loop: [br_netfilter, overlay]
 
-
 - name: Configure firewalld
   ansible.posix.firewalld:
     port: "{{ item }}/udp"
@@ -104,7 +129,6 @@
     immediate: true
     zone: public
   become: true
-
 
 - name: Configure kernel parameters
   ansible.posix.sysctl:

@@ -55,28 +55,38 @@
 - name: Create kubeconfig directory
   ansible.builtin.file:
     state: directory
-    path: /home/sope/.kube
-    owner: sope
-    group: sope
+    path: "/home/{{ item }}/.kube"
+    owner: "{{ item }}"
+    group: users
     mode: '0755'
   become: true
+  loop:
+    - sope
+    - lab-user
 
 - name: Copy kubeconfig
   ansible.builtin.copy:
     src: /etc/kubernetes/admin.conf
-    dest: /home/sope/.kube/config
-    owner: sope
-    group: sope
+    dest: "/home/{{ item }}/.kube/config"
+    owner: "{{ item }}"
+    group: users
+    mode: '0600'
     remote_src: true
   become: true
+  loop:
+    - sope
+    - lab-user
 
 - name: Change kubeconfig owner
   ansible.builtin.file:
-    path: /home/sope/.kube/config
-    owner: sope
-    group: sope
+    path: "/home/{{ item }}/.kube/config"
+    owner: "{{ item }}"
+    group: users
     mode: '0600'
   become: true
+  loop:
+    - sope
+    - lab-user
 
 - name: Install cillium
   kubernetes.core.helm:
@@ -152,7 +162,7 @@
     - metrics-server
   #--kubelet-insecure-tls
 
-- name: Add --kubelet-insecure-tls to metrics-server deployment using JSON patch
+- name: Add kubelet-insecure-tls to metrics-server deployment using JSON patch
   kubernetes.core.k8s_json_patch:
     kind: Deployment
     namespace: kube-system
