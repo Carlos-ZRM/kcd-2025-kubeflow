@@ -1,2 +1,7 @@
 ---
 # vars file for config-ingress
+
+
+config_ingress_k8s_domain: sope.kubeflow.local
+
+

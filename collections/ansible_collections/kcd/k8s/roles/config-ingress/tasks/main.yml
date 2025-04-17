@@ -1,6 +1,53 @@
 ---
 # tasks file for config-ingress
 
+- name: Create directory for certs
+  ansible.builtin.file:
+    path: /etc/ssl/sope.local
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+    
+- name: Generate an OpenSSL private key CA
+  community.crypto.openssl_privatekey:
+    path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
+    type: Ed25519
+  become: true
+    #curve: secp256r1
+
+- name: Generate an OpenSSL Certificate Signing Request CA
+  community.crypto.openssl_csr:
+    path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.csr
+    privatekey_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
+    common_name: "{{ config_ingress_k8s_domain }}"
+    basic_constraints:
+      - CA:TRUE
+  become: true
+
+- name: Generate a root CA
+  community.crypto.x509_certificate:
+    path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.crt
+    privatekey_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
+    csr_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.csr
+    provider: selfsigned
+  become: true
+
+
+- name: Generate an OpenSSL private key for domain
+  community.crypto.openssl_privatekey:
+    path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.pem
+    type: Ed25519
+  become: true
+
+- name: Generate an OpenSSL Certificate Signing Request for domain
+  community.crypto.openssl_csr:
+    path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.csr
+    privatekey_path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.pem
+    common_name: "{{ config_ingress_k8s_domain }}"
+  become: true
+
 - name: Create namespaces for k8s services
   kubernetes.core.k8s:
     state: present
@@ -48,7 +95,7 @@
     namespace: kubernetes-dashboard
     kubeconfig: /etc/kubernetes/admin.conf
   become: true
-  tags: 
+  tags:
     - k8s-dashboard
 
 - name: Create cluster role binding for dashboard
