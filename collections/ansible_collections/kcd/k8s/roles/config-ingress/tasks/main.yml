@@ -68,10 +68,51 @@
 
 - name: Install nginx ingress with helm
   ansible.builtin.command:
-    cmd: helm install my-ingress oci://ghcr.io/nginx/charts/nginx-ingress --version 2.0.1 --namespace nginx-ingress
+    cmd: helm install default oci://ghcr.io/nginx/charts/nginx-ingress --version 2.0.1 --namespace nginx-ingress  --set "controller.enableTLSPassthrough=true"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   when: helm_repo.rc != 0 or helm_repo.stdout == ""
+  become: true
+
+- name: Get NodePort of default-nginx-ingress-controller service
+  kubernetes.core.k8s_info:
+    kind: Service
+    namespace: nginx-ingress
+    name: default-nginx-ingress-controller
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: ingress_service
+  become: true
+
+- name: Extract NodePort for port 80
+  ansible.builtin.set_fact:
+    ingress_nodeport_80: "{{ ingress_service.resources[0].spec.ports | selectattr('port', 'equalto', 80) | map(attribute='nodePort') | first }}"
+  become: true
+
+- name: Extract NodePort for port 443
+  ansible.builtin.set_fact:
+    ingress_nodeport_443: "{{ ingress_service.resources[0].spec.ports | selectattr('port', 'equalto', 443) | map(attribute='nodePort') | first }}"
+  become: true
+
+- name: Debug NodePort
+  ansible.builtin.debug:
+    msg: "The NodePort for default-nginx-ingress-controller on port 80 is {{ ingress_nodeport_80 }} and on port 443 is {{ ingress_nodeport_443 }}"
+
+- name: Create HAProxy configuration for nginx ingress controller
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /etc/haproxy/conf.d/{{ item | regex_replace('.j2', '') }}
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  loop:
+    - nginx-controller-https.cfg.j2
+    - nginx-controller-http.cfg.j2
+
+- name: Reload HAProxy service
+  ansible.builtin.service:
+    name: haproxy
+    state: reloaded
   become: true
 
 - name: Install kube dashboard with helm
@@ -83,6 +124,13 @@
     chart_repo_url: https://kubernetes.github.io/dashboard/
     kubeconfig: /etc/kubernetes/admin.conf
   become: true
+  tags:
+    - k8s-dashboard
+
+- name: Create ingress for kube dashboard
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'insgress-dashboard.yaml.j2') | from_yaml }}"
   tags:
     - k8s-dashboard
 

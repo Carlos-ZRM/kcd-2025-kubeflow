@@ -84,6 +84,7 @@
   loop:
     - kubernetes
     - cryptography
+    - kubernetes-validate
 
 - name: Set hostname
   ansible.builtin.hostname:
@@ -130,6 +131,9 @@
     zone: public
   become: true
 
+
+# Configure Kernel parameters for Kubernetes
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#configure-the-kernel-parameters
 - name: Configure kernel parameters
   ansible.posix.sysctl:
     name: "{{ item }}"

@@ -1,0 +1,7 @@
+frontend ingress-controller-443
+  bind *:8443
+  default_backend ingress-controller-443
+
+backend ingress-controller-443
+    balance     roundrobin
+    server nginxhttps 127.0.0.1:{{ ingress_nodeport_443}} check

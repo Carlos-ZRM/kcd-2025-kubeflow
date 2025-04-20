@@ -1,0 +1,7 @@
+frontend ingress-controller-80
+  bind *:8080
+  default_backend ingress-controller-80
+
+backend ingress-controller-80
+    balance     roundrobin
+    server nginx 127.0.0.1:{{ ingress_nodeport_80 }} check
