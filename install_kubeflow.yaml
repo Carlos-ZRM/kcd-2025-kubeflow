@@ -36,3 +36,4 @@
             name: install-kubeflow
           tags:
             - install-kubeflow
+            - config-ingress
