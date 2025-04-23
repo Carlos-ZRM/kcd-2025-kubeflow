@@ -13,7 +13,7 @@
 - name: Generate an OpenSSL private key CA
   community.crypto.openssl_privatekey:
     path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
-    type: Ed25519
+    type: RSA
   become: true
     #curve: secp256r1
 
@@ -36,15 +36,36 @@
 
 - name: Generate an OpenSSL private key for domain
   community.crypto.openssl_privatekey:
-    path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.pem
-    type: Ed25519
+    path: /etc/ssl/sope.local/{{ item }}-{{ config_ingress_k8s_domain }}.pem
+    type: RSA
   become: true
+  loop:
+    - kube-dashboard
+    - kiali
+    - kubeflow
 
 - name: Generate an OpenSSL Certificate Signing Request for domain
   community.crypto.openssl_csr:
-    path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.csr
-    privatekey_path: /etc/ssl/sope.local/{{ config_ingress_k8s_domain }}.pem
-    common_name: "{{ config_ingress_k8s_domain }}"
+    path: /etc/ssl/sope.local/{{ item }}-{{ config_ingress_k8s_domain }}.csr
+    privatekey_path: /etc/ssl/sope.local/{{ item }}-{{ config_ingress_k8s_domain }}.pem
+    common_name: "{{ item }}.{{ config_ingress_k8s_domain }}"
+  become: true
+  loop:
+    - kube-dashboard
+    - kiali
+    - kubeflow
+
+- name: Generate an OpenSSL certificate signed with your own CA certificate
+  community.crypto.x509_certificate:
+    path: /etc/ssl/sope.local/{{ item }}-{{ config_ingress_k8s_domain }}.crt
+    csr_path: /etc/ssl/sope.local/{{ item }}-{{ config_ingress_k8s_domain }}.csr
+    ownca_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.crt
+    ownca_privatekey_path: /etc/ssl/sope.local/ca-{{ config_ingress_k8s_domain }}.pem
+    provider: ownca
+  loop:
+    - kube-dashboard
+    - kiali
+    - kubeflow
   become: true
 
 - name: Create namespaces for k8s services

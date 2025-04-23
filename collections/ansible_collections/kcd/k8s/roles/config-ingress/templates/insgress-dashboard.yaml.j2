@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: "kube-dashboard.sope.com"
+  - host: "kube-dashboard.{{ config_ingress_k8s_domain }}"
     http:
       paths:
       - path: /

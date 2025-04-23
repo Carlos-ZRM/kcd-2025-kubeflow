@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kiali-ingress
+  namespace: istio-system
+  annotations: {}
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "kiali.{{ config_ingress_k8s_domain }}"
+    http:
+      paths:
+      - path: /kiali
+        pathType: Prefix
+        backend:
+          service:
+            name: kiali
+            port:
+              number: 20001

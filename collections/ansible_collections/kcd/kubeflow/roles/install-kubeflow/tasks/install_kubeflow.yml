@@ -1,11 +1,40 @@
 ---
 # This playbook installs Kubeflow on a Kubernetes cluster using kustomize.
+
+# Configure Kernel parameters for Kubeflow
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#configure-the-kernel-parameters
+- name: Configure kernel parameters for Kubeflow
+  ansible.posix.sysctl:
+    name: "{{ item.parameter }}"
+    value: "{{ item.parameter_value }}"
+    sysctl_set: true
+    reload: true
+  loop:
+    - { parameter: fs.inotify.max_user_instances, parameter_value: 2280 }
+    - { parameter: fs.inotify.max_user_watches, parameter_value: 1255360 }
+
+
 - name: Get a git repo
   ansible.builtin.git:
     repo: https://github.com/kubeflow/manifests.git
     dest: /tmp/manifests
 
-- name: Apply kustomize resources with retries
+
+- name: Check if Kubeflow namespace exists
+  kubernetes.core.k8s_info:
+    kind: Namespace
+    name: kubeflow
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: kubeflow_namespace
+  failed_when: false
+  become: true
+
+- name: Verify if Kubeflow is installed
+  ansible.builtin.debug:
+    msg: "Kubeflow is installed."
+  when: kubeflow_namespace.resources | length > 0
+
+- name: Install Kubeflow if not installed
   ansible.builtin.shell: |
     while ! kustomize build /tmp/manifests/example | kubectl apply --server-side --force-conflicts -f -; do
       echo "Retrying to apply resources"
@@ -14,4 +43,14 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   become: true
+  when: kubeflow_namespace.resources | length == 0
 
+- name: Create ingress for istio and kiali
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template',  '{{ item }}' ) | from_yaml }}"
+    kubeconfig: /etc/kubernetes/admin.conf
+  become: true
+  loop:
+    - istio.yaml.j2
+    - kiali.yaml.j2
